@@ -1,0 +1,432 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Dost</title>
+    <style>
+      :root { color-scheme: dark; font-family: "Iowan Old Style", Palatino, Georgia, serif; }
+      * { box-sizing: border-box; }
+      body { margin: 0; background: #14120e; color: #f3ecdf; min-height: 100dvh; display: flex; flex-direction: column; }
+
+      /* Header */
+      header { padding: 1.25rem 1.5rem 0; text-align: center; }
+      header h1 { font-weight: 500; letter-spacing: -0.03em; margin: 0 0 0.15rem; font-size: 1.6rem; }
+      header p { color: #c8bba6; margin: 0; font-size: 0.85rem; }
+
+      /* Mode toggle */
+      .mode-bar { display: flex; justify-content: center; gap: 0; margin: 1.25rem auto 0; border: 1px solid #3c3428; border-radius: 999px; overflow: hidden; width: fit-content; }
+      .mode-bar button { border: 0; padding: 0.55rem 1.5rem; background: transparent; color: #c8bba6; font: inherit; font-size: 0.85rem; cursor: pointer; transition: background 0.2s, color 0.2s; }
+      .mode-bar button.active { background: #e7d7bf; color: #1b160f; }
+
+      /* Main area */
+      main { flex: 1; display: flex; flex-direction: column; max-width: 42rem; width: 100%; margin: 0 auto; padding: 1rem 1.25rem 1.5rem; }
+
+      /* Chat log (text mode) */
+      #log { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 0.6rem; padding-bottom: 0.5rem; }
+      .bubble { padding: 0.8rem 1rem; border-radius: 1rem; line-height: 1.45; white-space: pre-wrap; max-width: 85%; animation: fadeIn 0.15s ease; }
+      .user { background: #2a241c; align-self: flex-end; }
+      .assistant { background: #1f2a24; align-self: flex-start; }
+      .partial { color: #b7aa96; font-style: italic; align-self: flex-start; }
+
+      /* Text input row */
+      .text-input-row { display: flex; gap: 0.5rem; padding-top: 0.75rem; border-top: 1px solid #251f18; }
+      .text-input-row input { flex: 1; padding: 0.7rem 1rem; border-radius: 999px; border: 1px solid #3c3428; background: #1d1a15; color: inherit; font: inherit; outline: none; }
+      .text-input-row input:focus { border-color: #6d5e49; }
+      .text-input-row button { flex-shrink: 0; border: 0; border-radius: 999px; padding: 0.7rem 1.2rem; background: #e7d7bf; color: #1b160f; font: inherit; cursor: pointer; }
+      .text-input-row button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+      /* Voice mode */
+      .voice-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.5rem; }
+      .voice-area .orb-container { position: relative; width: 140px; height: 140px; }
+      .voice-area .orb { width: 140px; height: 140px; border-radius: 50%; background: radial-gradient(circle at 40% 40%, #3a3028, #1d1a15); border: 2px solid #3c3428; cursor: pointer; transition: transform 0.3s, box-shadow 0.3s, border-color 0.3s; }
+      .voice-area .orb:hover { transform: scale(1.04); }
+
+      /* Orb states */
+      .voice-area.listening .orb { border-color: #d7a15e; box-shadow: 0 0 30px rgba(215, 161, 94, 0.25), 0 0 60px rgba(215, 161, 94, 0.1); animation: pulse 1.5s ease-in-out infinite; }
+      .voice-area.thinking .orb { border-color: #8b7355; box-shadow: 0 0 20px rgba(139, 115, 85, 0.2); animation: spin-glow 2s linear infinite; }
+      .voice-area.speaking .orb { border-color: #6abf8a; box-shadow: 0 0 30px rgba(106, 191, 138, 0.25), 0 0 60px rgba(106, 191, 138, 0.1); animation: speak-pulse 0.8s ease-in-out infinite; }
+
+      .voice-label { font-size: 0.9rem; color: #c8bba6; min-height: 1.4rem; text-align: center; }
+      .voice-hint { font-size: 0.75rem; color: #6d5e49; text-align: center; }
+
+      /* Status bar */
+      #status { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.75rem; color: #6d5e49; text-align: center; padding: 0.5rem; min-height: 1.6rem; }
+
+      /* Hidden */
+      .hidden { display: none !important; }
+
+      @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+      @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+      @keyframes speak-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.04); } }
+      @keyframes spin-glow {
+        0% { box-shadow: 0 0 20px rgba(139,115,85,0.3); }
+        50% { box-shadow: 0 0 35px rgba(139,115,85,0.15); }
+        100% { box-shadow: 0 0 20px rgba(139,115,85,0.3); }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Dost</h1>
+      <p>Your personal AI assistant</p>
+      <div class="mode-bar">
+        <button id="modeText" class="active">Text</button>
+        <button id="modeVoice">Voice</button>
+      </div>
+    </header>
+
+    <main>
+      <!-- Text mode -->
+      <div id="textView">
+        <div id="log"></div>
+        <div class="text-input-row">
+          <input id="textInput" placeholder="Type a message…" />
+          <button id="sendText" type="button">Send</button>
+        </div>
+      </div>
+
+      <!-- Voice mode -->
+      <div id="voiceView" class="voice-area hidden">
+        <div class="orb-container">
+          <div class="orb" id="orb"></div>
+        </div>
+        <div class="voice-label" id="voiceLabel">Tap to speak</div>
+        <div class="voice-hint" id="voiceHint"></div>
+      </div>
+    </main>
+
+    <div id="status"></div>
+
+    <script>
+      const textView = document.querySelector("#textView");
+      const voiceView = document.querySelector("#voiceView");
+      const modeTextBtn = document.querySelector("#modeText");
+      const modeVoiceBtn = document.querySelector("#modeVoice");
+      const textInput = document.querySelector("#textInput");
+      const sendTextBtn = document.querySelector("#sendText");
+      const logEl = document.querySelector("#log");
+      const statusEl = document.querySelector("#status");
+      const orb = document.querySelector("#orb");
+      const voiceLabel = document.querySelector("#voiceLabel");
+      const voiceHint = document.querySelector("#voiceHint");
+
+      const conversationId = "dost-" + crypto.randomUUID().slice(0, 8);
+      let mode = "text";
+      let socket = null;
+      let recording = false;
+      let audioContext = null;
+      let processor = null;
+      let mediaStream = null;
+      let assistantEl = null;
+      let acceptAudio = true;
+
+      // Audio buffering: length-based playback
+      let playing = false;
+      let currentAudio = null;
+      const audioQueue = [];
+      const pendingChunks = [];
+      let totalPendingBytes = 0;
+      let responseDone = false;
+      const PLAY_THRESHOLD = 128000; // ~128KB before starting playback
+
+      // ─── Mode switching ───
+
+      modeTextBtn.addEventListener("click", () => switchMode("text"));
+      modeVoiceBtn.addEventListener("click", () => switchMode("voice"));
+
+      function switchMode(newMode) {
+        if (mode === newMode) return;
+        mode = newMode;
+        modeTextBtn.classList.toggle("active", mode === "text");
+        modeVoiceBtn.classList.toggle("active", mode === "voice");
+        textView.classList.toggle("hidden", mode !== "text");
+        voiceView.classList.toggle("hidden", mode !== "voice");
+
+        if (mode === "voice") {
+          connectWebSocket();
+        } else {
+          stopMic();
+          stopPlayback();
+          if (socket) { socket.close(); socket = null; }
+          setVoiceState("idle");
+        }
+      }
+
+      // ─── WebSocket ───
+
+      function connectWebSocket() {
+        if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) return;
+        const protocol = location.protocol === "https:" ? "wss" : "ws";
+        socket = new WebSocket(protocol + "://" + location.host + "/ws/voice");
+        socket.binaryType = "arraybuffer";
+        socket.addEventListener("open", () => {
+          socket.send(JSON.stringify({ type: "session.start", conversationId }));
+          setStatus("connecting");
+        });
+        socket.addEventListener("close", () => {
+          socket = null;
+          if (mode === "voice") {
+            setVoiceState("idle");
+            voiceHint.textContent = "Disconnected. Tap to reconnect.";
+            stopMic();
+          }
+        });
+        socket.addEventListener("message", (event) => {
+          if (typeof event.data !== "string") return;
+          onServerEvent(JSON.parse(event.data));
+        });
+      }
+
+      // ─── Server events ───
+
+      function onServerEvent(msg) {
+        if (msg.type === "session.ready") {
+          setStatus("");
+          setVoiceState("idle");
+          voiceHint.textContent = "";
+        }
+        if (msg.type === "transcript.partial") {
+          if (mode === "text") { /* text mode doesn't use partials */ }
+        }
+        if (msg.type === "transcript.final") {
+          acceptAudio = true;
+          if (mode === "text") showUser(msg.text);
+        }
+        if (msg.type === "agent.status") {
+          if (mode === "voice") setVoiceState(msg.status === "thinking" ? "thinking" : "idle");
+          if (mode === "text") setStatus(msg.status);
+        }
+        if (msg.type === "tool.call") {
+          if (mode === "text") setStatus("tool: " + msg.name);
+        }
+        if (msg.type === "response.text.delta") {
+          if (mode === "voice") setVoiceState("speaking");
+          if (mode === "text") appendAssistant(msg.text);
+        }
+        if (msg.type === "response.audio.delta" && acceptAudio) {
+          bufferAudio(msg.audio, msg.contentType);
+        }
+        if (msg.type === "response.done") {
+          responseDone = true;
+          flushAudioQueue();
+          if (mode === "text") setStatus("");
+          if (mode === "voice") {
+            if (!playing) setVoiceState("idle");
+            voiceLabel.textContent = "Tap to speak";
+          }
+        }
+        if (msg.type === "error") {
+          setStatus(msg.code + ": " + msg.message);
+          if (mode === "voice") setVoiceState("idle");
+        }
+      }
+
+      // ─── Voice state & orb ───
+
+      function setVoiceState(state) {
+        voiceView.classList.remove("listening", "thinking", "speaking");
+        if (state === "listening") {
+          voiceView.classList.add("listening");
+          voiceLabel.textContent = "Listening…";
+        } else if (state === "thinking") {
+          voiceView.classList.add("thinking");
+          voiceLabel.textContent = "Thinking…";
+        } else if (state === "speaking") {
+          voiceView.classList.add("speaking");
+          voiceLabel.textContent = "Speaking…";
+        } else {
+          voiceLabel.textContent = voiceLabel.textContent || "Tap to speak";
+        }
+      }
+
+      // ─── Orb tap → toggle mic ───
+
+      orb.addEventListener("click", async () => {
+        if (!socket || socket.readyState !== WebSocket.OPEN) {
+          connectWebSocket();
+          return;
+        }
+        if (recording) stopMic();
+        else await startMic();
+      });
+
+      // ─── Text mode ───
+
+      textInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" && !sendTextBtn.disabled) sendTextMessage();
+      });
+      sendTextBtn.addEventListener("click", sendTextMessage);
+
+      async function sendTextMessage() {
+        const text = textInput.value.trim();
+        if (!text) return;
+        textInput.value = "";
+        showUser(text);
+        setStatus("thinking");
+        sendTextBtn.disabled = true;
+        textInput.disabled = true;
+        try {
+          const response = await fetch("/api/chat", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ conversationId, message: text }),
+          });
+          const data = await response.json();
+          if (!response.ok) {
+            setStatus((data.error?.code || "error") + ": " + (data.error?.message || response.statusText));
+          } else {
+            appendAssistant(data.message);
+            setStatus("");
+          }
+        } catch (err) {
+          setStatus("error: " + err.message);
+        } finally {
+          sendTextBtn.disabled = false;
+          textInput.disabled = false;
+          textInput.focus();
+        }
+      }
+
+      // ─── Chat log ───
+
+      function showUser(text) {
+        document.querySelector("#partial")?.remove();
+        const el = document.createElement("div");
+        el.className = "bubble user";
+        el.textContent = text;
+        logEl.append(el);
+        assistantEl = null;
+        logEl.scrollTop = logEl.scrollHeight;
+      }
+
+      function appendAssistant(text) {
+        if (!assistantEl) {
+          assistantEl = document.createElement("div");
+          assistantEl.className = "bubble assistant";
+          logEl.append(assistantEl);
+        }
+        assistantEl.textContent += text;
+        logEl.scrollTop = logEl.scrollHeight;
+      }
+
+      function setStatus(text) { statusEl.textContent = text; }
+
+      // ─── Microphone ───
+
+      async function startMic() {
+        acceptAudio = false;
+        stopPlayback();
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+          audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true },
+        });
+        audioContext = new AudioContext();
+        const inputRate = audioContext.sampleRate;
+        const source = audioContext.createMediaStreamSource(mediaStream);
+        processor = audioContext.createScriptProcessor(4096, 1, 1);
+        const mute = audioContext.createGain();
+        mute.gain.value = 0;
+        processor.onaudioprocess = (event) => {
+          if (!recording || !socket || socket.readyState !== WebSocket.OPEN) return;
+          const pcm = floatTo16(downsample(event.inputBuffer.getChannelData(0), inputRate, 16000));
+          socket.send(pcm.buffer);
+        };
+        source.connect(processor);
+        processor.connect(mute);
+        mute.connect(audioContext.destination);
+        socket.send(JSON.stringify({ type: "audio.start", sampleRate: 16000, channels: 1 }));
+        recording = true;
+        setVoiceState("listening");
+      }
+
+      function stopMic() {
+        if (!recording && !mediaStream) return;
+        recording = false;
+        if (socket && socket.readyState === WebSocket.OPEN) {
+          socket.send(JSON.stringify({ type: "audio.stop" }));
+        }
+        processor?.disconnect();
+        processor = null;
+        mediaStream?.getTracks().forEach((track) => track.stop());
+        mediaStream = null;
+        void audioContext?.close();
+        audioContext = null;
+      }
+
+      function downsample(input, inRate, outRate) {
+        if (inRate === outRate) return input;
+        const ratio = inRate / outRate;
+        const length = Math.floor(input.length / ratio);
+        const result = new Float32Array(length);
+        for (let i = 0; i < length; i += 1) result[i] = input[Math.floor(i * ratio)];
+        return result;
+      }
+
+      function floatTo16(input) {
+        const out = new Int16Array(input.length);
+        for (let i = 0; i < input.length; i += 1) {
+          const sample = Math.max(-1, Math.min(1, input[i]));
+          out[i] = sample < 0 ? sample * 0x8000 : sample * 0x7fff;
+        }
+        return out;
+      }
+
+      // ─── Audio playback (length-based buffering) ───
+
+      function bufferAudio(b64, contentType) {
+        const binary = atob(b64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+        pendingChunks.push({ bytes, type: contentType || "audio/mpeg" });
+        totalPendingBytes += bytes.length;
+        if (totalPendingBytes >= PLAY_THRESHOLD) flushAudioQueue();
+      }
+
+      function flushAudioQueue() {
+        if (pendingChunks.length === 0) return;
+        const allBytes = pendingChunks.reduce((acc, c) => {
+          const merged = new Uint8Array(acc.length + c.bytes.length);
+          merged.set(acc); merged.set(c.bytes, acc.length);
+          return merged;
+        }, new Uint8Array(0));
+        const type = pendingChunks[0].type;
+        pendingChunks.length = 0;
+        totalPendingBytes = 0;
+        audioQueue.push(URL.createObjectURL(new Blob([allBytes], { type })));
+        void playNext();
+      }
+
+      async function playNext() {
+        if (playing || audioQueue.length === 0) return;
+        playing = true;
+        if (mode === "voice") setVoiceState("speaking");
+        const url = audioQueue.shift();
+        currentAudio = new Audio(url);
+        currentAudio.onended = () => {
+          URL.revokeObjectURL(url);
+          playing = false;
+          currentAudio = null;
+          if (audioQueue.length > 0) { void playNext(); return; }
+          if (responseDone && mode === "voice") setVoiceState("idle");
+        };
+        currentAudio.onerror = () => {
+          URL.revokeObjectURL(url);
+          playing = false;
+          currentAudio = null;
+          void playNext();
+        };
+        try { await currentAudio.play(); } catch { playing = false; currentAudio = null; void playNext(); }
+      }
+
+      function stopPlayback() {
+        pendingChunks.length = 0;
+        totalPendingBytes = 0;
+        responseDone = false;
+        audioQueue.splice(0).forEach((url) => URL.revokeObjectURL(url));
+        currentAudio?.pause();
+        currentAudio = null;
+        playing = false;
+      }
+    </script>
+  </body>
+</html>
