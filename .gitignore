@@ -1,8 +1,10 @@
 node_modules/
-dist/
-.env
+**/dist/
+**/.env
 data/
 *.log
 .DS_Store
 coverage/
-config/mcp.servers.json
+apps/core/config/mcp.servers.json
+apps/core/package-lock.json.bak
+pnpm-lock.yaml

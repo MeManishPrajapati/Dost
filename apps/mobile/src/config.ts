@@ -1,0 +1,5 @@
+export const DEFAULT_SERVER_URL = "ws://192.168.0.103:4000/device";
+export const RECONNECT_MAX_DELAY_MS = 30_000;
+export const RECONNECT_BASE_DELAY_MS = 1_000;
+export const RECONNECT_MAX_ATTEMPTS = 10;
+export const HEARTBEAT_INTERVAL_MS = 30_000;

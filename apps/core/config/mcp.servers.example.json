@@ -8,20 +8,10 @@
       "args": ["-y", "mcp-remote", "YOUR_ZOHO_MCP_URL", "--transport", "http-only"]
     },
     {
-      "id": "notes",
-      "enabled": false,
-      "transport": "stdio",
-      "command": "node",
-      "args": ["--import", "tsx", "examples/notes-mcp/server.ts"],
-      "env": {
-        "NOTES_PATH": "./data/notes.json"
-      }
-    },
-    {
-      "id": "weather",
+      "id": "device-service",
       "enabled": false,
       "transport": "http",
-      "url": "http://127.0.0.1:3001/mcp",
+      "url": "http://127.0.0.1:4001/mcp",
       "headers": {}
     }
   ]
