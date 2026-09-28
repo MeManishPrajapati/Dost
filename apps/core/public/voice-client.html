@@ -21,10 +21,12 @@
       .header-spacer { flex-shrink: 0; height: 3.6rem; }
 
       /* ── Mode toggle button (top-right) ── */
-      .mode-toggle { position: absolute; top: 0.85rem; right: 1rem; width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--border); background: var(--surface); color: var(--muted); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s, border-color 0.2s; }
-      .mode-toggle:hover { border-color: var(--dim); background: #252017; }
-      .mode-toggle:active { transform: scale(0.93); }
-      .mode-toggle svg { width: 20px; height: 20px; fill: currentColor; }
+      .mode-bar { position: absolute; top: 0.65rem; right: 1rem; display: flex; gap: 0.25rem; }
+      .mode-btn { height: 34px; padding: 0 0.7rem; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); color: var(--muted); cursor: pointer; font: inherit; font-size: 0.75rem; display: flex; align-items: center; gap: 0.35rem; transition: background 0.2s, border-color 0.2s, color 0.2s; }
+      .mode-btn:hover { border-color: var(--dim); background: #252017; }
+      .mode-btn:active { transform: scale(0.95); }
+      .mode-btn.active { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+      .mode-btn svg { width: 16px; height: 16px; fill: currentColor; }
 
       /* ── Main area ── */
       main { flex: 1; display: flex; flex-direction: column; max-width: 42rem; width: 100%; margin: 0 auto; overflow: hidden; }
@@ -64,6 +66,18 @@
       /* ── Status ── */
       #status { flex-shrink: 0; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.72rem; color: var(--dim); text-align: center; padding: 0.35rem 1rem; min-height: 1.4rem; }
 
+      /* ── Camera mode ── */
+      #cameraView { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+      .camera-preview-container { position: relative; flex-shrink: 0; background: #0a0a0a; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: center; max-height: 50vh; overflow: hidden; }
+      .camera-preview-container video { width: 100%; max-height: 50vh; object-fit: cover; display: block; }
+      .camera-flip-btn { position: absolute; top: 0.6rem; right: 0.6rem; width: 38px; height: 38px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.25); background: rgba(0,0,0,0.45); color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); transition: background 0.2s; z-index: 2; }
+      .camera-flip-btn:hover { background: rgba(0,0,0,0.65); }
+      .camera-flip-btn:active { transform: scale(0.9); }
+      .camera-flip-btn svg { width: 20px; height: 20px; fill: currentColor; }
+      .camera-error { padding: 2rem 1.25rem; text-align: center; color: var(--muted); font-size: 0.9rem; line-height: 1.5; }
+      .camera-error .camera-error-icon { font-size: 2rem; margin-bottom: 0.5rem; display: block; }
+      #cameraLog { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 0.6rem; padding: 0.75rem 1.25rem; overscroll-behavior: contain; }
+
       .hidden { display: none !important; }
 
       @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
@@ -76,11 +90,18 @@
     <header>
       <h1>Dost</h1>
       <p>Your personal AI assistant</p>
-      <!-- Shows mic icon in text mode → switch to voice; shows keyboard icon in voice mode → switch to text -->
-      <button class="mode-toggle" id="modeToggle" aria-label="Switch mode">
-        <svg id="iconMic" viewBox="0 0 24 24"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Zm-1-9a1 1 0 1 1 2 0v6a1 1 0 1 1-2 0V5Zm6 6a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.93V20H8v2h8v-2h-3v-2.07A7 7 0 0 0 19 11h-2Z"/></svg>
-        <svg id="iconKeyboard" class="hidden" viewBox="0 0 24 24"><path d="M3 5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H3Zm0 2h18v10H3V7Zm2 2v2h2V9H5Zm4 0v2h2V9H9Zm4 0v2h2V9h-2Zm4 0v2h2V9h-2ZM5 13v2h2v-2H5Zm4 0v2h6v-2H9Zm8 0v2h2v-2h-2Z"/></svg>
-      </button>
+      <!-- Mode bar: Text | Voice | Camera -->
+      <div class="mode-bar">
+        <button class="mode-btn active" data-mode="text" aria-label="Text mode">
+          <svg viewBox="0 0 24 24"><path d="M3 5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H3Zm0 2h18v10H3V7Zm2 2v2h2V9H5Zm4 0v2h2V9H9Zm4 0v2h2V9h-2Zm4 0v2h2V9h-2ZM5 13v2h2v-2H5Zm4 0v2h6v-2H9Zm8 0v2h2v-2h-2Z"/></svg>
+        </button>
+        <button class="mode-btn" data-mode="voice" aria-label="Voice mode">
+          <svg viewBox="0 0 24 24"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Zm-1-9a1 1 0 1 1 2 0v6a1 1 0 1 1-2 0V5Zm6 6a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.93V20H8v2h8v-2h-3v-2.07A7 7 0 0 0 19 11h-2Z"/></svg>
+        </button>
+        <button class="mode-btn" data-mode="camera" aria-label="Camera mode">
+          <svg viewBox="0 0 24 24"><path d="M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4ZM9 2l-1.83 2H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-3.17L15 2H9Zm3 15a5 5 0 1 1 0-10 5 5 0 0 1 0 10Z"/></svg>
+        </button>
+      </div>
     </header>
     <div class="header-spacer"></div>
 
@@ -104,6 +125,24 @@
         <div class="voice-label" id="voiceLabel">Tap to speak</div>
         <div class="voice-hint" id="voiceHint"></div>
       </div>
+
+      <!-- Camera mode -->
+      <div id="cameraView" class="hidden">
+        <div class="camera-preview-container">
+          <video id="cameraPreview" autoplay playsinline muted></video>
+          <button id="cameraFlip" class="camera-flip-btn" type="button" aria-label="Switch camera">
+            <svg viewBox="0 0 24 24"><path d="M20 5h-3.17L15 3H9L7.17 5H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2Zm-8 13a5.5 5.5 0 0 1 0-11v2.5L15.5 6 12 2.5V5a7 7 0 1 0 7 7h-2.5A4.5 4.5 0 0 1 12 16.5Z"/></svg>
+          </button>
+          <div id="cameraError" class="camera-error hidden"></div>
+        </div>
+        <div id="cameraLog"></div>
+        <div class="text-input-row">
+          <input id="cameraInput" placeholder="Ask something about this…" autocomplete="off" />
+          <button id="sendCamera" type="button" aria-label="Send">
+            <svg viewBox="0 0 24 24"><path d="M2.01 21 23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+          </button>
+        </div>
+      </div>
     </main>
 
     <div id="status"></div>
@@ -111,9 +150,8 @@
     <script>
       const textView = document.querySelector("#textView");
       const voiceView = document.querySelector("#voiceView");
-      const modeToggle = document.querySelector("#modeToggle");
-      const iconMic = document.querySelector("#iconMic");
-      const iconKeyboard = document.querySelector("#iconKeyboard");
+      const cameraView = document.querySelector("#cameraView");
+      const modeBtns = document.querySelectorAll(".mode-btn");
       const textInput = document.querySelector("#textInput");
       const sendTextBtn = document.querySelector("#sendText");
       const logEl = document.querySelector("#log");
@@ -121,6 +159,12 @@
       const orb = document.querySelector("#orb");
       const voiceLabel = document.querySelector("#voiceLabel");
       const voiceHint = document.querySelector("#voiceHint");
+      const cameraPreview = document.querySelector("#cameraPreview");
+      const cameraFlipBtn = document.querySelector("#cameraFlip");
+      const cameraErrorEl = document.querySelector("#cameraError");
+      const cameraLogEl = document.querySelector("#cameraLog");
+      const cameraInput = document.querySelector("#cameraInput");
+      const sendCameraBtn = document.querySelector("#sendCamera");
 
       function generateId() {
         if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID().slice(0, 8);
@@ -144,6 +188,12 @@
       let responseDone = false;
       const PLAY_THRESHOLD = 128000;
 
+      let cameraStream = null;
+      let cameraAnalyzing = false;
+      let cameraFacingMode = "environment";
+      const CAMERA_MAX_DIMENSION = 1280;
+      const CAMERA_JPEG_QUALITY = 0.85;
+
       // ─── PWA ───
 
       if ("serviceWorker" in navigator) {
@@ -164,24 +214,34 @@
 
       // ─── Mode switching ───
 
-      modeToggle.addEventListener("click", () => switchMode(mode === "text" ? "voice" : "text"));
+      modeBtns.forEach((btn) => btn.addEventListener("click", () => switchMode(btn.dataset.mode)));
 
       function switchMode(newMode) {
         if (mode === newMode) return;
+        const prevMode = mode;
         mode = newMode;
-        iconMic.classList.toggle("hidden", mode === "voice");
-        iconKeyboard.classList.toggle("hidden", mode === "text");
+
+        modeBtns.forEach((btn) => btn.classList.toggle("active", btn.dataset.mode === mode));
         textView.classList.toggle("hidden", mode !== "text");
         voiceView.classList.toggle("hidden", mode !== "voice");
+        cameraView.classList.toggle("hidden", mode !== "camera");
 
-        if (mode === "voice") {
-          connectWebSocket();
-        } else {
+        if (prevMode === "voice") {
           stopMic();
           stopPlayback();
           if (socket) { socket.close(); socket = null; }
           setVoiceState("idle");
+        }
+        if (prevMode === "camera") {
+          closeCamera();
+        }
+
+        if (mode === "voice") {
+          connectWebSocket();
+        } else if (mode === "text") {
           textInput.focus();
+        } else if (mode === "camera") {
+          openCamera();
         }
       }
 
@@ -482,6 +542,161 @@
         currentAudio?.pause();
         currentAudio = null;
         playing = false;
+      }
+
+      // ─── Camera ───
+
+      async function openCamera() {
+        cameraErrorEl.classList.add("hidden");
+        cameraPreview.classList.remove("hidden");
+        cameraFlipBtn.classList.remove("hidden");
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          showCameraError("Your browser does not support camera access.");
+          return;
+        }
+        try {
+          if (cameraStream) {
+            cameraStream.getTracks().forEach((track) => track.stop());
+          }
+          cameraStream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: cameraFacingMode },
+            audio: false,
+          });
+          cameraPreview.srcObject = cameraStream;
+        } catch (err) {
+          if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+            showCameraError("Camera permission is required to use Camera mode.");
+          } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
+            showCameraError("No camera found on this device.");
+          } else if (err.name === "OverconstrainedError") {
+            cameraFacingMode = cameraFacingMode === "environment" ? "user" : "environment";
+            return openCamera();
+          } else {
+            showCameraError("Could not access the camera: " + err.message);
+          }
+        }
+      }
+
+      cameraFlipBtn.addEventListener("click", () => {
+        cameraFacingMode = cameraFacingMode === "environment" ? "user" : "environment";
+        openCamera();
+      });
+
+      function closeCamera() {
+        if (cameraStream) {
+          cameraStream.getTracks().forEach((track) => track.stop());
+          cameraStream = null;
+        }
+        cameraPreview.srcObject = null;
+      }
+
+      function showCameraError(msg) {
+        cameraPreview.classList.add("hidden");
+        cameraErrorEl.textContent = msg;
+        cameraErrorEl.classList.remove("hidden");
+      }
+
+      function captureFrame() {
+        if (!cameraStream || !cameraPreview.videoWidth) return null;
+        const vw = cameraPreview.videoWidth;
+        const vh = cameraPreview.videoHeight;
+        let tw = vw;
+        let th = vh;
+        if (tw > CAMERA_MAX_DIMENSION || th > CAMERA_MAX_DIMENSION) {
+          const scale = CAMERA_MAX_DIMENSION / Math.max(tw, th);
+          tw = Math.round(tw * scale);
+          th = Math.round(th * scale);
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = tw;
+        canvas.height = th;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(cameraPreview, 0, 0, tw, th);
+        return new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", CAMERA_JPEG_QUALITY));
+      }
+
+      // ─── Camera send ───
+
+      cameraInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" && !sendCameraBtn.disabled) sendCameraMessage();
+      });
+      sendCameraBtn.addEventListener("click", sendCameraMessage);
+
+      async function sendCameraMessage() {
+        const text = cameraInput.value.trim();
+        if (!text || cameraAnalyzing) return;
+
+        const blob = await captureFrame();
+        if (!blob) {
+          setStatus("Couldn\u2019t capture the current frame. Please try again.");
+          return;
+        }
+
+        cameraInput.value = "";
+        showCameraUser(text);
+        showCameraThinking();
+        cameraAnalyzing = true;
+        sendCameraBtn.disabled = true;
+        cameraInput.disabled = true;
+
+        try {
+          const form = new FormData();
+          form.append("image", blob, "frame.jpg");
+          form.append("query", text);
+          const response = await fetch("/api/vision/query", { method: "POST", body: form });
+          const data = await response.json();
+          removeCameraThinking();
+          if (!response.ok) {
+            setStatus((data.error?.code || "error") + ": " + (data.error?.message || response.statusText));
+          } else {
+            appendCameraAssistant(data.answer);
+          }
+        } catch (err) {
+          removeCameraThinking();
+          setStatus("error: " + err.message);
+        } finally {
+          cameraAnalyzing = false;
+          sendCameraBtn.disabled = false;
+          cameraInput.disabled = false;
+          cameraInput.focus();
+        }
+      }
+
+      // ─── Camera chat log ───
+
+      let cameraAssistantEl = null;
+
+      function showCameraUser(text) {
+        const el = document.createElement("div");
+        el.className = "bubble user";
+        el.textContent = text;
+        cameraLogEl.append(el);
+        cameraAssistantEl = null;
+        cameraLogEl.scrollTop = cameraLogEl.scrollHeight;
+      }
+
+      function appendCameraAssistant(text) {
+        if (!cameraAssistantEl) {
+          cameraAssistantEl = document.createElement("div");
+          cameraAssistantEl.className = "bubble assistant";
+          cameraLogEl.append(cameraAssistantEl);
+        }
+        cameraAssistantEl.textContent += text;
+        cameraLogEl.scrollTop = cameraLogEl.scrollHeight;
+      }
+
+      function showCameraThinking() {
+        removeCameraThinking();
+        const el = document.createElement("div");
+        el.className = "thinking-bubble";
+        el.id = "cameraThinking";
+        el.innerHTML = '<div class="dot"></div><div class="dot"></div><div class="dot"></div>';
+        cameraLogEl.append(el);
+        cameraLogEl.scrollTop = cameraLogEl.scrollHeight;
+      }
+
+      function removeCameraThinking() {
+        document.querySelector("#cameraThinking")?.remove();
       }
     </script>
   </body>

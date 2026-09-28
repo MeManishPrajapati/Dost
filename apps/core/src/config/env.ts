@@ -38,6 +38,9 @@ const envSchema = z.object({
   ENABLE_DEV_CLIENT: z.enum(["true", "false"]).optional(),
   TLS_CERT: z.string().optional(),
   TLS_KEY: z.string().optional(),
+  VISION_PROVIDER: z.enum(["ollama"]).default("ollama"),
+  VISION_MODEL: z.string().min(1).default("gemma4:latest"),
+  VISION_MAX_IMAGE_BYTES: z.coerce.number().int().positive().default(5_242_880),
 });
 
 export interface Env {
@@ -69,6 +72,9 @@ export interface Env {
   enableDevClient: boolean;
   tlsCert: string | undefined;
   tlsKey: string | undefined;
+  visionProvider: "ollama";
+  visionModel: string;
+  visionMaxImageBytes: number;
 }
 
 export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
@@ -117,5 +123,8 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
       : raw.NODE_ENV !== "production",
     tlsCert: raw.TLS_CERT,
     tlsKey: raw.TLS_KEY,
+    visionProvider: raw.VISION_PROVIDER,
+    visionModel: raw.VISION_MODEL,
+    visionMaxImageBytes: raw.VISION_MAX_IMAGE_BYTES,
   };
 }

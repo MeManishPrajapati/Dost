@@ -29,4 +29,15 @@ describe("architecture boundaries", () => {
   it("does not call Google Calendar from inside the agent", () => {
     expect(readTree("src")).not.toMatch(/googleapis|google-calendar|calendar\.google/);
   });
+
+  it("keeps vision providers unaware of agent, transport, and voice layers", () => {
+    const vision = readTree("src/vision");
+    expect(vision).not.toMatch(/from ["'][^"']*\/(agent|transport|voice|server)\//);
+    expect(vision).not.toMatch(/fastify|langgraph|sarvam/i);
+  });
+
+  it("keeps the vision transport route unaware of provider internals", () => {
+    const visionRoute = readFileSync("src/transport/http/vision.ts", "utf8");
+    expect(visionRoute).not.toMatch(/ollama|langgraph|sarvam|mongodb/i);
+  });
 });

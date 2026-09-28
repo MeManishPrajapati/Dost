@@ -21,6 +21,22 @@ describe("configuration", () => {
     expect(env.memoryDriver).toBe("memory");
   });
 
+  it("sets vision defaults", () => {
+    expect(env.visionProvider).toBe("ollama");
+    expect(env.visionModel).toBe("gemma4:latest");
+    expect(env.visionMaxImageBytes).toBe(5_242_880);
+  });
+
+  it("allows overriding vision configuration", () => {
+    const custom = loadEnv({
+      VISION_PROVIDER: "ollama",
+      VISION_MODEL: "llava",
+      VISION_MAX_IMAGE_BYTES: "1048576",
+    } as unknown as NodeJS.ProcessEnv);
+    expect(custom.visionModel).toBe("llava");
+    expect(custom.visionMaxImageBytes).toBe(1_048_576);
+  });
+
   it("rejects an invalid Ollama URL without echoing the value", () => {
     expect(() => loadEnv({ OLLAMA_BASE_URL: "not a url" } as NodeJS.ProcessEnv)).toThrow(
       /OLLAMA_BASE_URL/,

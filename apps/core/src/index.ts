@@ -10,6 +10,8 @@ import { createHttpServer } from "./server/http.js";
 import { createLogger } from "./server/logger.js";
 import { createSarvamSTT } from "./voice/stt/sarvam.js";
 import { createSarvamTTS } from "./voice/tts/sarvam.js";
+import { createVisionProvider } from "./vision/factory.js";
+import { VisionService } from "./vision/service.js";
 
 async function main(): Promise<void> {
   loadDotEnv();
@@ -31,12 +33,14 @@ async function main(): Promise<void> {
     historyLimit: env.historyMessageLimit,
     timeoutMs: env.agentTimeoutMs,
   });
+  const vision = new VisionService(createVisionProvider(env));
   const app = await createHttpServer({
     env,
     logger,
     agent,
     stt: createSarvamSTT(env),
     tts: createSarvamTTS(env),
+    vision,
   });
 
   let closing = false;

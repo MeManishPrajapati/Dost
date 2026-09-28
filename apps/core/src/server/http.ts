@@ -4,10 +4,12 @@ import { fileURLToPath } from "node:url";
 import Fastify, { type FastifyInstance } from "fastify";
 import type { Env } from "../config/env.js";
 import { registerChatRoute } from "../transport/http/chat.js";
+import { registerVisionRoute } from "../transport/http/vision.js";
 import type { AgentRunner } from "../shared/types.js";
 import { AppError } from "../shared/errors.js";
 import type { STTProvider } from "../voice/stt/provider.js";
 import type { TTSProvider } from "../voice/tts/provider.js";
+import type { VisionService } from "../vision/service.js";
 import { requestIdFromIncoming, type AppLogger } from "./logger.js";
 import { registerVoiceSocket } from "./websocket.js";
 
@@ -17,6 +19,7 @@ export interface AppDeps {
   agent: AgentRunner;
   stt: STTProvider;
   tts: TTSProvider;
+  vision: VisionService;
 }
 
 async function loadTlsOptions(env: Env) {
@@ -64,6 +67,11 @@ export async function createHttpServer(deps: AppDeps): Promise<FastifyInstance> 
 
   app.get("/health", async () => ({ status: "ok" as const }));
   registerChatRoute(app, deps);
+  registerVisionRoute(app, {
+    vision: deps.vision,
+    logger: deps.logger,
+    maxImageBytes: deps.env.visionMaxImageBytes,
+  });
 
   if (deps.env.enableDevClient) {
     const publicDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../public");

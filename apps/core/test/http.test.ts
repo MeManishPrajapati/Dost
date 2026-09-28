@@ -5,6 +5,7 @@ import { createHttpServer } from "../src/server/http.js";
 import type { AgentRunner } from "../src/shared/types.js";
 import type { STTProvider } from "../src/voice/stt/provider.js";
 import type { TTSProvider } from "../src/voice/tts/provider.js";
+import { VisionService } from "../src/vision/service.js";
 
 const env = loadEnv({
   NODE_ENV: "test",
@@ -16,6 +17,10 @@ const unusedVoice = {
   stt: { async startSession() { throw new Error("unused"); } } satisfies STTProvider,
   tts: { async startSession() { throw new Error("unused"); } } satisfies TTSProvider,
 };
+
+const stubVision = new VisionService({
+  async analyze() { throw new Error("unused"); },
+});
 
 describe("HTTP API", () => {
   it("returns health", async () => {
@@ -78,5 +83,6 @@ async function createServer(agent: AgentRunner) {
     logger: pino({ level: "silent" }),
     agent,
     ...unusedVoice,
+    vision: stubVision,
   });
 }
