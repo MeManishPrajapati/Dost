@@ -2,87 +2,97 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, interactive-widget=resizes-visual" />
+    <meta name="theme-color" content="#14120e" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="manifest" href="/manifest.json" />
     <title>Dost</title>
     <style>
-      :root { color-scheme: dark; font-family: "Iowan Old Style", Palatino, Georgia, serif; }
-      * { box-sizing: border-box; }
-      body { margin: 0; background: #14120e; color: #f3ecdf; min-height: 100dvh; display: flex; flex-direction: column; }
+      :root { color-scheme: dark; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; --bg: #14120e; --surface: #1d1a15; --border: #3c3428; --text: #f3ecdf; --muted: #c8bba6; --dim: #6d5e49; --accent: #e7d7bf; --accent-fg: #1b160f; }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      html { height: 100%; overflow: hidden; }
+      body { background: var(--bg); color: var(--text); height: 100%; display: flex; flex-direction: column; overflow: hidden; -webkit-tap-highlight-color: transparent; }
 
-      /* Header */
-      header { padding: 1.25rem 1.5rem 0; text-align: center; }
-      header h1 { font-weight: 500; letter-spacing: -0.03em; margin: 0 0 0.15rem; font-size: 1.6rem; }
-      header p { color: #c8bba6; margin: 0; font-size: 0.85rem; }
+      /* ── Header (pinned) ── */
+      header { position: fixed; top: 0; left: 0; right: 0; z-index: 10; padding: 0.75rem 1.25rem; text-align: center; background: var(--bg); border-bottom: 1px solid var(--border); }
+      header h1 { font-weight: 600; letter-spacing: -0.03em; font-size: 1.4rem; }
+      header p { color: var(--muted); font-size: 0.78rem; margin-top: 0.1rem; }
+      .header-spacer { flex-shrink: 0; height: 3.6rem; }
 
-      /* Mode toggle */
-      .mode-bar { display: flex; justify-content: center; gap: 0; margin: 1.25rem auto 0; border: 1px solid #3c3428; border-radius: 999px; overflow: hidden; width: fit-content; }
-      .mode-bar button { border: 0; padding: 0.55rem 1.5rem; background: transparent; color: #c8bba6; font: inherit; font-size: 0.85rem; cursor: pointer; transition: background 0.2s, color 0.2s; }
-      .mode-bar button.active { background: #e7d7bf; color: #1b160f; }
+      /* ── Mode toggle button (top-right) ── */
+      .mode-toggle { position: absolute; top: 0.85rem; right: 1rem; width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--border); background: var(--surface); color: var(--muted); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s, border-color 0.2s; }
+      .mode-toggle:hover { border-color: var(--dim); background: #252017; }
+      .mode-toggle:active { transform: scale(0.93); }
+      .mode-toggle svg { width: 20px; height: 20px; fill: currentColor; }
 
-      /* Main area */
-      main { flex: 1; display: flex; flex-direction: column; max-width: 42rem; width: 100%; margin: 0 auto; padding: 1rem 1.25rem 1.5rem; }
+      /* ── Main area ── */
+      main { flex: 1; display: flex; flex-direction: column; max-width: 42rem; width: 100%; margin: 0 auto; overflow: hidden; }
 
-      /* Chat log (text mode) */
-      #log { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 0.6rem; padding-bottom: 0.5rem; }
-      .bubble { padding: 0.8rem 1rem; border-radius: 1rem; line-height: 1.45; white-space: pre-wrap; max-width: 85%; animation: fadeIn 0.15s ease; }
-      .user { background: #2a241c; align-self: flex-end; }
-      .assistant { background: #1f2a24; align-self: flex-start; }
-      .partial { color: #b7aa96; font-style: italic; align-self: flex-start; }
+      /* ── Text mode ── */
+      #textView { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+      #log { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 0.6rem; padding: 0.75rem 1.25rem; overscroll-behavior: contain; }
+      .bubble { padding: 0.75rem 1rem; border-radius: 1.1rem; line-height: 1.5; white-space: pre-wrap; max-width: 85%; animation: fadeIn 0.15s ease; font-size: 0.95rem; }
+      .user { background: #2a241c; align-self: flex-end; border-bottom-right-radius: 0.35rem; }
+      .assistant { background: #1f2a24; align-self: flex-start; border-bottom-left-radius: 0.35rem; }
+      .thinking-bubble { align-self: flex-start; padding: 0.75rem 1.2rem; background: #1f2a24; border-radius: 1.1rem; border-bottom-left-radius: 0.35rem; animation: fadeIn 0.15s ease; display: flex; gap: 0.35rem; align-items: center; }
+      .thinking-bubble .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); animation: bounce 1.2s ease-in-out infinite; }
+      .thinking-bubble .dot:nth-child(2) { animation-delay: 0.15s; }
+      .thinking-bubble .dot:nth-child(3) { animation-delay: 0.3s; }
+      @keyframes bounce { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(-5px); } }
 
-      /* Text input row */
-      .text-input-row { display: flex; gap: 0.5rem; padding-top: 0.75rem; border-top: 1px solid #251f18; }
-      .text-input-row input { flex: 1; padding: 0.7rem 1rem; border-radius: 999px; border: 1px solid #3c3428; background: #1d1a15; color: inherit; font: inherit; outline: none; }
-      .text-input-row input:focus { border-color: #6d5e49; }
-      .text-input-row button { flex-shrink: 0; border: 0; border-radius: 999px; padding: 0.7rem 1.2rem; background: #e7d7bf; color: #1b160f; font: inherit; cursor: pointer; }
-      .text-input-row button:disabled { opacity: 0.4; cursor: not-allowed; }
+      .text-input-row { flex-shrink: 0; display: flex; gap: 0.5rem; padding: 0.75rem 1.25rem; padding-bottom: max(0.75rem, env(safe-area-inset-bottom)); border-top: 1px solid var(--border); background: var(--bg); }
+      .text-input-row input { flex: 1; padding: 0.7rem 1rem; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); color: inherit; font: inherit; font-size: 1rem; outline: none; }
+      .text-input-row input:focus { border-color: var(--dim); }
+      .text-input-row button { flex-shrink: 0; border: 0; border-radius: 999px; width: 42px; height: 42px; background: var(--accent); color: var(--accent-fg); cursor: pointer; display: flex; align-items: center; justify-content: center; }
+      .text-input-row button:disabled { opacity: 0.35; cursor: not-allowed; }
+      .text-input-row button svg { width: 20px; height: 20px; fill: currentColor; }
 
-      /* Voice mode */
-      .voice-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.5rem; }
-      .voice-area .orb-container { position: relative; width: 140px; height: 140px; }
-      .voice-area .orb { width: 140px; height: 140px; border-radius: 50%; background: radial-gradient(circle at 40% 40%, #3a3028, #1d1a15); border: 2px solid #3c3428; cursor: pointer; transition: transform 0.3s, box-shadow 0.3s, border-color 0.3s; }
-      .voice-area .orb:hover { transform: scale(1.04); }
+      /* ── Voice mode ── */
+      .voice-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.25rem; padding-bottom: env(safe-area-inset-bottom); }
+      .orb-container { position: relative; width: 150px; height: 150px; }
+      .orb { width: 150px; height: 150px; border-radius: 50%; background: radial-gradient(circle at 38% 38%, #3a3028, #1d1a15); border: 2px solid var(--border); cursor: pointer; transition: transform 0.3s, box-shadow 0.3s, border-color 0.3s; }
+      .orb:hover { transform: scale(1.04); }
 
-      /* Orb states */
-      .voice-area.listening .orb { border-color: #d7a15e; box-shadow: 0 0 30px rgba(215, 161, 94, 0.25), 0 0 60px rgba(215, 161, 94, 0.1); animation: pulse 1.5s ease-in-out infinite; }
-      .voice-area.thinking .orb { border-color: #8b7355; box-shadow: 0 0 20px rgba(139, 115, 85, 0.2); animation: spin-glow 2s linear infinite; }
-      .voice-area.speaking .orb { border-color: #6abf8a; box-shadow: 0 0 30px rgba(106, 191, 138, 0.25), 0 0 60px rgba(106, 191, 138, 0.1); animation: speak-pulse 0.8s ease-in-out infinite; }
+      .voice-area.listening .orb { border-color: #d7a15e; box-shadow: 0 0 30px rgba(215,161,94,0.25), 0 0 60px rgba(215,161,94,0.1); animation: pulse 1.5s ease-in-out infinite; }
+      .voice-area.thinking .orb { border-color: #8b7355; box-shadow: 0 0 20px rgba(139,115,85,0.2); animation: spin-glow 2s linear infinite; }
+      .voice-area.speaking .orb { border-color: #6abf8a; box-shadow: 0 0 30px rgba(106,191,138,0.25), 0 0 60px rgba(106,191,138,0.1); animation: speak-pulse 0.8s ease-in-out infinite; }
 
-      .voice-label { font-size: 0.9rem; color: #c8bba6; min-height: 1.4rem; text-align: center; }
-      .voice-hint { font-size: 0.75rem; color: #6d5e49; text-align: center; }
+      .voice-label { font-size: 0.95rem; color: var(--muted); min-height: 1.4rem; text-align: center; }
+      .voice-hint { font-size: 0.78rem; color: var(--dim); text-align: center; min-height: 1.2rem; transition: opacity 0.2s; }
 
-      /* Status bar */
-      #status { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.75rem; color: #6d5e49; text-align: center; padding: 0.5rem; min-height: 1.6rem; }
+      /* ── Status ── */
+      #status { flex-shrink: 0; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.72rem; color: var(--dim); text-align: center; padding: 0.35rem 1rem; min-height: 1.4rem; }
 
-      /* Hidden */
       .hidden { display: none !important; }
 
       @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
       @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.06); } }
       @keyframes speak-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.04); } }
-      @keyframes spin-glow {
-        0% { box-shadow: 0 0 20px rgba(139,115,85,0.3); }
-        50% { box-shadow: 0 0 35px rgba(139,115,85,0.15); }
-        100% { box-shadow: 0 0 20px rgba(139,115,85,0.3); }
-      }
+      @keyframes spin-glow { 0% { box-shadow: 0 0 20px rgba(139,115,85,0.3); } 50% { box-shadow: 0 0 35px rgba(139,115,85,0.15); } 100% { box-shadow: 0 0 20px rgba(139,115,85,0.3); } }
     </style>
   </head>
   <body>
     <header>
       <h1>Dost</h1>
       <p>Your personal AI assistant</p>
-      <div class="mode-bar">
-        <button id="modeText" class="active">Text</button>
-        <button id="modeVoice">Voice</button>
-      </div>
+      <!-- Shows mic icon in text mode → switch to voice; shows keyboard icon in voice mode → switch to text -->
+      <button class="mode-toggle" id="modeToggle" aria-label="Switch mode">
+        <svg id="iconMic" viewBox="0 0 24 24"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Zm-1-9a1 1 0 1 1 2 0v6a1 1 0 1 1-2 0V5Zm6 6a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.93V20H8v2h8v-2h-3v-2.07A7 7 0 0 0 19 11h-2Z"/></svg>
+        <svg id="iconKeyboard" class="hidden" viewBox="0 0 24 24"><path d="M3 5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H3Zm0 2h18v10H3V7Zm2 2v2h2V9H5Zm4 0v2h2V9H9Zm4 0v2h2V9h-2Zm4 0v2h2V9h-2ZM5 13v2h2v-2H5Zm4 0v2h6v-2H9Zm8 0v2h2v-2h-2Z"/></svg>
+      </button>
     </header>
+    <div class="header-spacer"></div>
 
     <main>
       <!-- Text mode -->
       <div id="textView">
         <div id="log"></div>
         <div class="text-input-row">
-          <input id="textInput" placeholder="Type a message…" />
-          <button id="sendText" type="button">Send</button>
+          <input id="textInput" placeholder="Type a message…" autocomplete="off" />
+          <button id="sendText" type="button" aria-label="Send">
+            <svg viewBox="0 0 24 24"><path d="M2.01 21 23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+          </button>
         </div>
       </div>
 
@@ -101,8 +111,9 @@
     <script>
       const textView = document.querySelector("#textView");
       const voiceView = document.querySelector("#voiceView");
-      const modeTextBtn = document.querySelector("#modeText");
-      const modeVoiceBtn = document.querySelector("#modeVoice");
+      const modeToggle = document.querySelector("#modeToggle");
+      const iconMic = document.querySelector("#iconMic");
+      const iconKeyboard = document.querySelector("#iconKeyboard");
       const textInput = document.querySelector("#textInput");
       const sendTextBtn = document.querySelector("#sendText");
       const logEl = document.querySelector("#log");
@@ -111,7 +122,11 @@
       const voiceLabel = document.querySelector("#voiceLabel");
       const voiceHint = document.querySelector("#voiceHint");
 
-      const conversationId = "dost-" + crypto.randomUUID().slice(0, 8);
+      function generateId() {
+        if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID().slice(0, 8);
+        return Math.random().toString(36).slice(2, 10);
+      }
+      const conversationId = "dost-" + generateId();
       let mode = "text";
       let socket = null;
       let recording = false;
@@ -121,25 +136,41 @@
       let assistantEl = null;
       let acceptAudio = true;
 
-      // Audio buffering: length-based playback
       let playing = false;
       let currentAudio = null;
       const audioQueue = [];
       const pendingChunks = [];
       let totalPendingBytes = 0;
       let responseDone = false;
-      const PLAY_THRESHOLD = 128000; // ~128KB before starting playback
+      const PLAY_THRESHOLD = 128000;
+
+      // ─── PWA ───
+
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.register("/sw.js").catch(() => {});
+      }
+
+      // ─── Keep layout pinned when mobile keyboard opens ───
+
+      if (window.visualViewport) {
+        const onVPResize = () => {
+          const vv = window.visualViewport;
+          document.body.style.height = vv.height + "px";
+          window.scrollTo(0, 0);
+        };
+        window.visualViewport.addEventListener("resize", onVPResize);
+        window.visualViewport.addEventListener("scroll", () => window.scrollTo(0, 0));
+      }
 
       // ─── Mode switching ───
 
-      modeTextBtn.addEventListener("click", () => switchMode("text"));
-      modeVoiceBtn.addEventListener("click", () => switchMode("voice"));
+      modeToggle.addEventListener("click", () => switchMode(mode === "text" ? "voice" : "text"));
 
       function switchMode(newMode) {
         if (mode === newMode) return;
         mode = newMode;
-        modeTextBtn.classList.toggle("active", mode === "text");
-        modeVoiceBtn.classList.toggle("active", mode === "voice");
+        iconMic.classList.toggle("hidden", mode === "voice");
+        iconKeyboard.classList.toggle("hidden", mode === "text");
         textView.classList.toggle("hidden", mode !== "text");
         voiceView.classList.toggle("hidden", mode !== "voice");
 
@@ -150,6 +181,7 @@
           stopPlayback();
           if (socket) { socket.close(); socket = null; }
           setVoiceState("idle");
+          textInput.focus();
         }
       }
 
@@ -195,14 +227,14 @@
         }
         if (msg.type === "agent.status") {
           if (mode === "voice") setVoiceState(msg.status === "thinking" ? "thinking" : "idle");
-          if (mode === "text") setStatus(msg.status);
+          if (mode === "text" && msg.status === "thinking") showThinking();
         }
         if (msg.type === "tool.call") {
           if (mode === "text") setStatus("tool: " + msg.name);
         }
         if (msg.type === "response.text.delta") {
           if (mode === "voice") setVoiceState("speaking");
-          if (mode === "text") appendAssistant(msg.text);
+          if (mode === "text") { removeThinking(); appendAssistant(msg.text); }
         }
         if (msg.type === "response.audio.delta" && acceptAudio) {
           bufferAudio(msg.audio, msg.contentType);
@@ -210,13 +242,14 @@
         if (msg.type === "response.done") {
           responseDone = true;
           flushAudioQueue();
-          if (mode === "text") setStatus("");
+          if (mode === "text") { removeThinking(); setStatus(""); }
           if (mode === "voice") {
             if (!playing) setVoiceState("idle");
             voiceLabel.textContent = "Tap to speak";
           }
         }
         if (msg.type === "error") {
+          removeThinking();
           setStatus(msg.code + ": " + msg.message);
           if (mode === "voice") setVoiceState("idle");
         }
@@ -228,15 +261,19 @@
         voiceView.classList.remove("listening", "thinking", "speaking");
         if (state === "listening") {
           voiceView.classList.add("listening");
-          voiceLabel.textContent = "Listening…";
+          voiceLabel.textContent = "Listening\u2026";
+          voiceHint.textContent = "Tap again when you\u2019re done speaking";
         } else if (state === "thinking") {
           voiceView.classList.add("thinking");
-          voiceLabel.textContent = "Thinking…";
+          voiceLabel.textContent = "Thinking\u2026";
+          voiceHint.textContent = "";
         } else if (state === "speaking") {
           voiceView.classList.add("speaking");
-          voiceLabel.textContent = "Speaking…";
+          voiceLabel.textContent = "Speaking\u2026";
+          voiceHint.textContent = "";
         } else {
-          voiceLabel.textContent = voiceLabel.textContent || "Tap to speak";
+          voiceLabel.textContent = "Tap to speak";
+          voiceHint.textContent = "";
         }
       }
 
@@ -263,7 +300,7 @@
         if (!text) return;
         textInput.value = "";
         showUser(text);
-        setStatus("thinking");
+        showThinking();
         sendTextBtn.disabled = true;
         textInput.disabled = true;
         try {
@@ -273,13 +310,14 @@
             body: JSON.stringify({ conversationId, message: text }),
           });
           const data = await response.json();
+          removeThinking();
           if (!response.ok) {
             setStatus((data.error?.code || "error") + ": " + (data.error?.message || response.statusText));
           } else {
             appendAssistant(data.message);
-            setStatus("");
           }
         } catch (err) {
+          removeThinking();
           setStatus("error: " + err.message);
         } finally {
           sendTextBtn.disabled = false;
@@ -310,11 +348,29 @@
         logEl.scrollTop = logEl.scrollHeight;
       }
 
+      function showThinking() {
+        removeThinking();
+        const el = document.createElement("div");
+        el.className = "thinking-bubble";
+        el.id = "thinkingIndicator";
+        el.innerHTML = '<div class="dot"></div><div class="dot"></div><div class="dot"></div>';
+        logEl.append(el);
+        logEl.scrollTop = logEl.scrollHeight;
+      }
+
+      function removeThinking() {
+        document.querySelector("#thinkingIndicator")?.remove();
+      }
+
       function setStatus(text) { statusEl.textContent = text; }
 
       // ─── Microphone ───
 
       async function startMic() {
+        if (!window.isSecureContext) {
+          setStatus("Microphone requires HTTPS or localhost");
+          return;
+        }
         acceptAudio = false;
         stopPlayback();
         mediaStream = await navigator.mediaDevices.getUserMedia({

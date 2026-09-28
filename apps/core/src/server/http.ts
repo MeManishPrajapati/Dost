@@ -19,12 +19,20 @@ export interface AppDeps {
   tts: TTSProvider;
 }
 
+async function loadTlsOptions(env: Env) {
+  if (!env.tlsCert || !env.tlsKey) return undefined;
+  const [cert, key] = await Promise.all([readFile(env.tlsCert), readFile(env.tlsKey)]);
+  return { cert, key };
+}
+
 export async function createHttpServer(deps: AppDeps): Promise<FastifyInstance> {
+  const https = await loadTlsOptions(deps.env);
   const app = Fastify({
     logger: { level: deps.env.logLevel },
     genReqId: (request) => requestIdFromIncoming(request),
     bodyLimit: 1_000_000,
     requestTimeout: deps.env.agentTimeoutMs + 5_000,
+    ...(https && { https }),
   });
 
   app.addHook("onRequest", async (request, reply) => {
@@ -58,14 +66,18 @@ export async function createHttpServer(deps: AppDeps): Promise<FastifyInstance> 
   registerChatRoute(app, deps);
 
   if (deps.env.enableDevClient) {
-    const devClientPath = path.resolve(
-      path.dirname(fileURLToPath(import.meta.url)),
-      "../../public/voice-client.html",
-    );
-    app.get("/dev/voice", async (_request, reply) => {
-      const html = await readFile(devClientPath, "utf8");
-      return reply.type("text/html").send(html);
-    });
+    const publicDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../public");
+    const servePublicFile =
+      (file: string, contentType: string) => async (_request: unknown, reply: { type: (t: string) => { send: (b: string | Buffer) => unknown } }) => {
+        const content = await readFile(path.join(publicDir, file));
+        return reply.type(contentType).send(content);
+      };
+
+    app.get("/", servePublicFile("voice-client.html", "text/html"));
+    app.get("/manifest.json", servePublicFile("manifest.json", "application/manifest+json"));
+    app.get("/sw.js", servePublicFile("sw.js", "text/javascript"));
+    app.get("/icon-192.svg", servePublicFile("icon-192.svg", "image/svg+xml"));
+    app.get("/icon-512.svg", servePublicFile("icon-512.svg", "image/svg+xml"));
   }
 
   await registerVoiceSocket(app, deps);

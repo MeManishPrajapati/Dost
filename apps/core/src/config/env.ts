@@ -36,6 +36,8 @@ const envSchema = z.object({
   AGENT_TIMEOUT_MS: z.coerce.number().int().positive().default(120_000),
   MCP_CONFIG_PATH: z.string().min(1).default("./config/mcp.servers.example.json"),
   ENABLE_DEV_CLIENT: z.enum(["true", "false"]).optional(),
+  TLS_CERT: z.string().optional(),
+  TLS_KEY: z.string().optional(),
 });
 
 export interface Env {
@@ -65,6 +67,8 @@ export interface Env {
   agentTimeoutMs: number;
   mcpConfigPath: string;
   enableDevClient: boolean;
+  tlsCert: string | undefined;
+  tlsKey: string | undefined;
 }
 
 export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
@@ -111,5 +115,7 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
     enableDevClient: raw.ENABLE_DEV_CLIENT
       ? raw.ENABLE_DEV_CLIENT === "true"
       : raw.NODE_ENV !== "production",
+    tlsCert: raw.TLS_CERT,
+    tlsKey: raw.TLS_KEY,
   };
 }

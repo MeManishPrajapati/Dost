@@ -7,4 +7,5 @@ data/
 coverage/
 apps/core/config/mcp.servers.json
 apps/core/package-lock.json.bak
+**/.certs/
 pnpm-lock.yaml

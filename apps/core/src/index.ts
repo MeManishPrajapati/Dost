@@ -67,7 +67,8 @@ async function main(): Promise<void> {
     "Dost listening",
   );
   if (env.enableDevClient) {
-    logger.info(`voice test client: http://127.0.0.1:${env.port}/dev/voice`);
+    const proto = env.tlsCert ? "https" : "http";
+    logger.info(`voice test client: ${proto}://127.0.0.1:${env.port}`);
   }
 }
 
